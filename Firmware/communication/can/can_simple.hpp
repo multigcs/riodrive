@@ -37,6 +37,7 @@ class CANSimple {
         MSG_SET_VEL_GAINS,
         MSG_GET_ADC_VOLTAGE,
         MSG_GET_CONTROLLER_ERROR,
+        MSG_GET_RIO_STAT,
         MSG_CO_HEARTBEAT_CMD = 0x700,  // CANOpen NMT Heartbeat  SEND
     };
 
@@ -60,6 +61,7 @@ class CANSimple {
     bool get_controller_error_callback(const Axis& axis);
     bool get_sensorless_error_callback(const Axis& axis);
     bool get_encoder_estimates_callback(const Axis& axis);
+    bool get_rio_callback(const Axis& axis);
     bool get_encoder_count_callback(const Axis& axis);
     bool get_iq_callback(const Axis& axis);
     bool get_sensorless_estimates_callback(const Axis& axis);

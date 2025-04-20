@@ -103,6 +103,10 @@ void CANSimple::do_command(Axis& axis, const can_Message_t& msg) {
             break;
         case MSG_SET_INPUT_VEL:
             set_input_vel_callback(axis, msg);
+            
+            // get_encoder_estimates_callback(axis);
+            get_rio_callback(axis);
+            
             break;
         case MSG_SET_INPUT_TORQUE:
             set_input_torque_callback(axis, msg);
@@ -240,6 +244,45 @@ bool CANSimple::get_encoder_estimates_callback(const Axis& axis) {
 
     can_setSignal<float>(txmsg, axis.controller_.pos_estimate_linear_src_.any().value_or(0.0f), 0, 32, true);
     can_setSignal<float>(txmsg, axis.controller_.vel_estimate_src_.any().value_or(0.0f), 32, 32, true);
+
+    return canbus_->send_message(txmsg);
+}
+
+bool CANSimple::get_rio_callback(const Axis& axis) {
+    can_Message_t txmsg;
+    txmsg.id = axis.config_.can.node_id << NUM_CMD_ID_BITS;
+    txmsg.id += MSG_GET_RIO_STAT;
+    txmsg.isExt = axis.config_.can.is_extended;
+    txmsg.len = 8;
+
+    // Position
+    can_setSignal<int32_t>(txmsg, axis.encoder_.pos_estimate_counts_, 0, 32, true);
+
+    // Power
+    uint16_t electrical_power = uint16_t(axis.controller_.electrical_power_ * 10.0f);
+    can_setSignal(txmsg, uint16_t(electrical_power), 32, 16, true);
+
+    // Temperature
+    uint8_t temp = uint8_t(axis.motor_.fet_thermistor_.temperature_ * 2.0f);
+    can_setSignal(txmsg, uint8_t(temp), 48, 8, true);
+
+    // Status
+    uint8_t status = uint8_t(axis.current_state_);
+
+    // Motor flags
+    uint8_t motorFlags = axis.motor_.error_ != 0;
+
+    // Encoder flags
+    uint8_t encoderFlags = axis.encoder_.error_ != 0;
+
+    // Controller flags
+    uint8_t controllerFlags = axis.controller_.error_ != 0;
+
+    status |= uint8_t(axis.controller_.trajectory_done_<<7);
+    status |= uint8_t(motorFlags<<6);
+    status |= uint8_t(controllerFlags<<5);
+    status |= uint8_t(encoderFlags<<4);
+    can_setSignal(txmsg, uint8_t(status), 56, 8, true);
 
     return canbus_->send_message(txmsg);
 }
